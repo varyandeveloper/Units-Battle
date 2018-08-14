@@ -211,7 +211,8 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
         $currentHealth = $defender->getHealth();
         $defender->setHealth($currentHealth - $this->getPower());
 
-        if ($defender->getHealth() <= 0) {
+        if ($defender->isKilled()) {
+            $defender->setHealth(0);
             $defender->setKilled(true);
         }
 
