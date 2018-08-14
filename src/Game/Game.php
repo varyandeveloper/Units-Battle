@@ -2,6 +2,8 @@
 
 namespace VS\Battle\Game;
 
+use VS\Battle\Output\OutputInterface;
+use VS\Battle\Output\SimpleOutput;
 use VS\Battle\Unit\UnitMapper;
 use VS\Battle\Army\{
     ArmyInterface, Army
@@ -65,6 +67,18 @@ class Game implements GameInterface
 
         $this->isOver = true;
         $this->setWinnerArmy($this->firstArmy->isKilled() ? $this->secondArmy : $this->firstArmy);
+    }
+
+    /**
+     * @param OutputInterface|null $output
+     * @return void
+     */
+    public function showOutput(OutputInterface $output = null): void
+    {
+        if (null === $output) {
+            $output = new SimpleOutput;
+        }
+        echo $output->getOutput($this);
     }
 
     /**

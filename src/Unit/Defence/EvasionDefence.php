@@ -27,14 +27,4 @@ class EvasionDefence extends AbstractDefence implements DefenceInterface
     {
         $defender->setHealth($defender->getHealth() + $attacker->getPower());
     }
-
-    /**
-     * @param UnitInterface $attacker
-     * @param UnitInterface $defender
-     * @return float
-     */
-    public function getSavePercentage(UnitInterface $attacker, UnitInterface $defender): float
-    {
-        return 100;
-    }
 }

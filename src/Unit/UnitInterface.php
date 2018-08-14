@@ -9,7 +9,7 @@ use VS\Battle\Segregation\{
     KillableInterface, SubordinateInterface
 };
 use VS\Battle\Unit\{
-    Defence\DefenceInterface, Strategy\UnitStrategyInterface
+    Defence\DefenceInterface, Defence\DefenceStorage, Strategy\UnitStrategyInterface
 };
 
 /**
@@ -34,15 +34,15 @@ interface UnitInterface extends
     public function addDefence(DefenceInterface $defence);
 
     /**
-     * @return array
+     * @return DefenceStorage
      */
-    public function getDefences(): array;
+    public function getDefences(): DefenceStorage;
 
     /**
-     * @param DefenceInterface ...$defences
+     * @param DefenceStorage $storage
      * @return mixed
      */
-    public function setDefences(DefenceInterface ...$defences);
+    public function setDefences(DefenceStorage $storage);
 
     /**
      * @param UnitStrategyInterface $attack

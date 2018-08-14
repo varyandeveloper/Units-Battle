@@ -31,11 +31,25 @@ class UnitMapper
 
     const UNIT_DEFENCES = [
         self::SOLIDER_UNIT_CLASS => [
-            ShieldDefense::class,
-            EvasionDefence::class,
+            /*ShieldDefense::class,
+            EvasionDefence::class,*/
         ],
-        self::HEAVY_INFANTRY_CLASS => [],
+        self::HEAVY_INFANTRY_CLASS => [
+            /*ShieldDefense::class,*/
+        ],
         self::TANK_UNIT_CLASS => [],
+    ];
+
+    const UNIT_WEAPONS = [
+        self::SOLIDER_UNIT_CLASS => [
+
+        ],
+        self::HEAVY_INFANTRY_CLASS => [
+
+        ],
+        self::TANK_UNIT_CLASS => [
+
+        ]
     ];
 
     /**
@@ -43,9 +57,13 @@ class UnitMapper
      */
     protected static $unites = [];
     /**
-     * @var array $unitDefences
+     * @var array
      */
     protected static $unitDefences = [];
+    /**
+     * @var array
+     */
+    protected static $unitWeapons = [];
 
     /**
      * @param string $alias
@@ -113,5 +131,40 @@ class UnitMapper
         }
 
         return $array;
+    }
+
+    /**
+     * @param array $unitDefences
+     */
+    public static function setUnitDefences(array $unitDefences): void
+    {
+        self::$unitDefences = $unitDefences;
+    }
+
+    /**
+     * @param string $unitClass
+     * @return array
+     */
+    public static function getUnitWeapons(string $unitClass): array
+    {
+        if (!self::unitHasDefences($unitClass)) {
+            return [];
+        }
+
+        $array = self::UNIT_WEAPONS[$unitClass];
+
+        if (!empty(self::$unitWeapons[$unitClass])) {
+            $array = array_merge($array, self::$unitWeapons[$unitClass]);
+        }
+
+        return $array;
+    }
+
+    /**
+     * @param array $unitWeapons
+     */
+    public static function setUnitWeapons(array $unitWeapons): void
+    {
+        self::$unitWeapons = $unitWeapons;
     }
 }

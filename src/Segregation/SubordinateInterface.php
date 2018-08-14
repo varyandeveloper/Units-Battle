@@ -5,6 +5,7 @@ namespace VS\Battle\Segregation;
 /**
  * Interface SubordinateInterface
  * @package VS\Battle\Segregation
+ * @mixin \SplSubject
  */
 interface SubordinateInterface
 {

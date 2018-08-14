@@ -4,8 +4,10 @@ namespace VS\Battle\Unit;
 
 use VS\Battle\Army\ArmyInterface;
 use VS\Battle\GameObject\AbstractGameObject;
+use VS\Battle\Segregation\DestroyableInterface;
+use VS\Battle\Segregation\IncrementableInterface;
 use VS\Battle\Unit\Defence\{
-    DefenceInterface, NoDefence
+    DefenceInterface, DefenceStorage, NoDefence
 };
 use VS\Battle\Unit\Strategy\{
     UnitStrategyInterface, FindUnitWithMostPower
@@ -26,9 +28,9 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
      */
     protected $health;
     /**
-     * @var array
+     * @var DefenceStorage
      */
-    protected $defences = [];
+    protected $defences;
     /**
      * @var bool
      */
@@ -95,22 +97,19 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
     }
 
     /**
-     * @return array
+     * @return DefenceStorage
      */
-    public function getDefences(): array
+    public function getDefences(): DefenceStorage
     {
         return $this->defences;
     }
 
     /**
-     * @param DefenceInterface ...$defences
-     * @return void
+     * @param DefenceStorage $storage
      */
-    public function setDefences(DefenceInterface ...$defences): void
+    public function setDefences(DefenceStorage $storage): void
     {
-        foreach ($defences as $defence) {
-            $this->addDefence($defence);
-        }
+        $this->defences = $storage;
     }
 
     /**
@@ -118,7 +117,7 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
      */
     public function addDefence(DefenceInterface $defence)
     {
-        $this->defences[spl_object_hash($defence)] = $defence;
+        $this->defences->attach($defence);
     }
 
     /**
@@ -126,7 +125,7 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
      */
     public function takeDefence(DefenceInterface $defence)
     {
-        unset($this->defences[spl_object_hash($defence)]);
+        $this->defences->detach($defence);
     }
 
     /**
@@ -139,23 +138,20 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
     }
 
     /**
-     * @param UnitInterface $unit
+     * @param UnitInterface $attacker
      * @return DefenceInterface
      */
-    public function findTheBestWayToProtect(UnitInterface $unit): DefenceInterface
+    public function findTheBestWayToProtect(UnitInterface $attacker): DefenceInterface
     {
         // check if unit attack will kill me and I have defences then check my arsenal and use my best defence
-        if ($unit->getPower() > $this->getHealth() && !empty($this->getDefences())) {
-            $defences = array_values($this->getDefences());
-            usort($defences, function (DefenceInterface $current, DefenceInterface $next) use ($unit) {
-                return $next->getSavePercentage($unit, $this) <=> $current->getSavePercentage($unit, $this);
+        if ($this->willAttackerKillMeWithoutDefence($attacker) && $this->doIHaveDefences()) {
+            $defences = $this->getDefencesSimpleArray();
+            usort($defences, function (DefenceInterface $current, DefenceInterface $next) use ($attacker) {
+                return $next->getSaveValue() <=> $current->getSaveValue();
             });
 
-            /**
-             * @var DefenceInterface $currentDefence
-             */
-            $currentDefence = $defences[0];
-            if ($currentDefence->isDestroyable() || $currentDefence->getMaxUsageCount() === $currentDefence->getAlreadyUsedCount()) {
+            $currentDefence = $this->findMinCostlyDefence($defences, $attacker);
+            if ($this->shouldDefenceBeTaken($currentDefence)) {
                 $this->takeDefence($currentDefence);
             }
             $this->setProtectStrategy($currentDefence);
@@ -200,19 +196,23 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
     }
 
     /**
-     * @param UnitInterface $unit
+     * @param UnitInterface $defender
      * @return float
      */
-    public function attack(UnitInterface $unit): float
+    public function attack(UnitInterface $defender): float
     {
-        $defence = $unit->findTheBestWayToProtect($this);
-        $defence->applyDefence($this, $unit);
-        $defence->increment();
-        $currentHealth = $unit->getHealth();
-        $unit->setHealth($currentHealth - $this->getPower());
+        $defence = $defender->findTheBestWayToProtect($this);
+        $defence->applyDefence($this, $defender);
 
-        if ($unit->getHealth() <= 0) {
-            $unit->setKilled(true);
+        if ($defence instanceof IncrementableInterface) {
+            $defence->increment();
+        }
+
+        $currentHealth = $defender->getHealth();
+        $defender->setHealth($currentHealth - $this->getPower());
+
+        if ($defender->getHealth() <= 0) {
+            $defender->setKilled(true);
         }
 
         return $this->getPower() - $currentHealth;
@@ -240,8 +240,74 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
      */
     protected function initDefences(): void
     {
+        $this->defences = new DefenceStorage;
         foreach (UnitMapper::getUnitDefences(get_class($this)) as $defenceClass) {
             $this->addDefence(new $defenceClass);
         }
+    }
+
+    /**
+     * @param UnitInterface $unit
+     * @return bool
+     */
+    protected function willAttackerKillMeWithoutDefence(UnitInterface $unit): bool
+    {
+        return $unit->getPower() >= $this->getHealth();
+    }
+
+    /**
+     * @return bool
+     */
+    protected function doIHaveDefences(): bool
+    {
+        return $this->defences->count() > 0;
+    }
+
+    /**
+     * @return DefenceInterface[]
+     */
+    protected function getDefencesSimpleArray(): array
+    {
+        return iterator_to_array($this->getDefences());
+    }
+
+    /**
+     * Detect if defence used by defender unit (after last attack) is destroyed
+     *
+     * @param DefenceInterface $defence
+     * @return bool
+     */
+    protected function shouldDefenceBeTaken(DefenceInterface $defence): bool
+    {
+        if ($defence instanceof DestroyableInterface) {
+            return $defence->isDestroyed();
+        }
+
+        return false;
+    }
+
+    /**
+     * @param DefenceInterface[] $defences
+     * @param UnitInterface $attacker
+     * @return DefenceInterface
+     */
+    protected function findMinCostlyDefence(array $defences, UnitInterface $attacker): DefenceInterface
+    {
+        foreach ($defences as $defence) {
+            if ($defence->getSaveValue() >= $attacker->getPower()) {
+                return $defence;
+            }
+        }
+
+        return new NoDefence;
+    }
+
+    /**
+     * @param UnitInterface $attacker
+     * @return float
+     */
+    protected function getPowerHealthDifference(UnitInterface $attacker): float
+    {
+        return $attacker->getPower() - $this->getHealth();
     }
 }

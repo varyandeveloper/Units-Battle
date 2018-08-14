@@ -2,14 +2,19 @@
 
 namespace VS\Battle\Unit\Defence;
 
+use VS\Battle\Partial\DestroyableTrait;
+use VS\Battle\Segregation\DestroyableInterface;
+use VS\Battle\Segregation\IncrementableInterface;
 use VS\Battle\Unit\UnitInterface;
 
 /**
  * Class ShieldDefense
  * @package VS\Battle\Unit\Protect
  */
-class ShieldDefense extends AbstractDefence implements DefenceInterface
+class ShieldDefense extends AbstractDefence implements DefenceInterface, DestroyableInterface, IncrementableInterface
 {
+    use DestroyableTrait;
+
     /**
      * @var int
      */
@@ -22,5 +27,21 @@ class ShieldDefense extends AbstractDefence implements DefenceInterface
     public function applyDefence(UnitInterface $attacker, UnitInterface $defender): void
     {
         $defender->setHealth($defender->getHealth() + $this->defenceValue);
+    }
+
+    /**
+     * @return bool
+     */
+    public function isDestroyed(): bool
+    {
+        return $this->getAlreadyUsedCount() === $this->getMaxUsageCount();
+    }
+
+    /**
+     * @return void
+     */
+    public function increment(): void
+    {
+        $this->usedCount++;
     }
 }

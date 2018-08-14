@@ -3,6 +3,7 @@
 namespace VS\Battle\Game;
 
 use VS\Battle\Army\ArmyInterface;
+use VS\Battle\Output\OutputInterface;
 
 /**
  * Interface GameInterface
@@ -40,4 +41,10 @@ interface GameInterface
      * @return ArmyInterface
      */
     public function getWinnerArmy(): ArmyInterface;
+
+    /**
+     * @param OutputInterface $output
+     * @return mixed
+     */
+    public function showOutput(OutputInterface $output);
 }
