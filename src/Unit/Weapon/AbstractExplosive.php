@@ -22,6 +22,14 @@ abstract class AbstractExplosive extends AbstractWeapon implements
         DestroyableTrait;
 
     /**
+     * @return bool
+     */
+    public function isDestroyed(): bool
+    {
+        return true;
+    }
+
+    /**
      * @param UnitInterface $unit
      * @return bool
      */
