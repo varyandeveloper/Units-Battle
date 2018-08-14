@@ -8,9 +8,11 @@ use VS\Battle\{
 use VS\Battle\Segregation\{
     KillableInterface, SubordinateInterface
 };
-use VS\Battle\Unit\{
-    Defence\DefenceInterface, Defence\DefenceStorage, Strategy\UnitStrategyInterface
-};
+use VS\Battle\Unit\{Defence\DefenceInterface,
+    Defence\DefenceStorage,
+    Strategy\UnitStrategyInterface,
+    Weapon\WeaponInterface,
+    Weapon\WeaponStorage};
 
 /**
  * Interface UnitInterface
@@ -22,14 +24,37 @@ interface UnitInterface extends
     SubordinateInterface
 {
     /**
+     * @param WeaponInterface $weapon
+     * @return mixed
+     */
+    public function takeWeapon(WeaponInterface $weapon);
+
+    /**
+     * @param WeaponInterface $weapon
+     * @return mixed
+     */
+    public function addWeapon(WeaponInterface $weapon);
+
+    /**
+     * @return WeaponStorage
+     */
+    public function getWeapons(): WeaponStorage;
+
+    /**
+     * @param WeaponStorage $storage
+     * @return mixed
+     */
+    public function setWeapons(WeaponStorage $storage);
+
+    /**
      * @param DefenceInterface $defence
-     * @return void
+     * @return mixed
      */
     public function takeDefence(DefenceInterface $defence);
 
     /**
      * @param DefenceInterface $defence
-     * @return void
+     * @return mixed
      */
     public function addDefence(DefenceInterface $defence);
 
@@ -101,8 +126,14 @@ interface UnitInterface extends
     public function findTheNextTarget(ArmyInterface $army): UnitInterface;
 
     /**
-     * @param UnitInterface $unit
+     * @param UnitInterface $attacker
      * @return DefenceInterface
      */
-    public function findTheBestWayToProtect(UnitInterface $unit): DefenceInterface;
+    public function findTheBestWayToProtect(UnitInterface $attacker): DefenceInterface;
+
+    /**
+     * @param UnitInterface $attacker
+     * @return WeaponInterface
+     */
+    public function findTheBestWeaponToUseForAttack(UnitInterface $attacker): WeaponInterface;
 }

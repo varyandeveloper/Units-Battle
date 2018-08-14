@@ -12,6 +12,9 @@ use VS\Battle\Unit\Defence\{
 use VS\Battle\Unit\Strategy\{
     UnitStrategyInterface, FindUnitWithMostPower
 };
+use VS\Battle\Unit\Weapon\EmptyWeapon;
+use VS\Battle\Unit\Weapon\WeaponInterface;
+use VS\Battle\Unit\Weapon\WeaponStorage;
 
 /**
  * Class AbstractUnit
@@ -31,6 +34,10 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
      * @var DefenceStorage
      */
     protected $defences;
+    /**
+     * @var WeaponStorage
+     */
+    protected $weapons;
     /**
      * @var bool
      */
@@ -60,6 +67,7 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
         $this->setHealth($health);
         $this->setTargetFindStrategy(new FindUnitWithMostPower($this));
         $this->initDefences();
+        $this->initWeapons();
     }
 
     /**
@@ -114,10 +122,12 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
 
     /**
      * @param DefenceInterface $defence
+     * @return UnitInterface
      */
-    public function addDefence(DefenceInterface $defence)
+    public function addDefence(DefenceInterface $defence): UnitInterface
     {
         $this->defences->attach($defence);
+        return $this;
     }
 
     /**
@@ -126,6 +136,43 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
     public function takeDefence(DefenceInterface $defence)
     {
         $this->defences->detach($defence);
+    }
+
+    /**
+     * @param WeaponInterface $weapon
+     * @return mixed
+     */
+    public function takeWeapon(WeaponInterface $weapon): void
+    {
+        $this->weapons->detach($weapon);
+    }
+
+    /**
+     * @param WeaponInterface $weapon
+     * @return UnitInterface
+     */
+    public function addWeapon(WeaponInterface $weapon): UnitInterface
+    {
+        $this->weapons->attach($weapon);
+        return $this;
+    }
+
+    /**
+     * @return WeaponStorage
+     */
+    public function getWeapons(): WeaponStorage
+    {
+        return $this->weapons;
+    }
+
+    /**
+     * @param WeaponStorage $storage
+     * @return UnitInterface
+     */
+    public function setWeapons(WeaponStorage $storage): UnitInterface
+    {
+        $this->weapons = $storage;
+        return $this;
     }
 
     /**
@@ -161,6 +208,26 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
         $defence = new NoDefence;
         $this->setProtectStrategy($defence);
         return $defence;
+    }
+
+    /**
+     * @param UnitInterface $defender
+     * @return WeaponInterface
+     */
+    public function findTheBestWeaponToUseForAttack(UnitInterface $defender): WeaponInterface
+    {
+        $weapons = $this->getWeaponsSimpleArray();
+        usort($weapons, function (WeaponInterface $current, WeaponInterface $next) {
+            return $next->getPowerValue() <=> $current->getPowerValue();
+        });
+
+        $currentWeapon = $this->findMinCostlyWeapon($weapons);
+
+        if ($this->shouldWeaponBeTaken($currentWeapon)) {
+            $this->takeWeapon($currentWeapon);
+        }
+
+        return $currentWeapon;
     }
 
     /**
@@ -202,6 +269,7 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
     public function attack(UnitInterface $defender): float
     {
         $defence = $defender->findTheBestWayToProtect($this);
+        $weapon = $this->findTheBestWeaponToUseForAttack($defender);
         $defence->applyDefence($this, $defender);
 
         if ($defence instanceof IncrementableInterface) {
@@ -212,7 +280,6 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
         $defender->setHealth($currentHealth - $this->getPower());
 
         if ($defender->isKilled()) {
-            $defender->setHealth(0);
             $defender->setKilled(true);
         }
 
@@ -233,6 +300,7 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
      */
     public function setKilled(bool $killed): void
     {
+        $this->setHealth(0);
         $this->isKilled = $killed;
     }
 
@@ -244,6 +312,17 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
         $this->defences = new DefenceStorage;
         foreach (UnitMapper::getUnitDefences(get_class($this)) as $defenceClass) {
             $this->addDefence(new $defenceClass);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    protected function initWeapons(): void
+    {
+        $this->weapons = new WeaponStorage;
+        foreach (UnitMapper::getUnitWeapons(get_class($this)) as $weaponClass) {
+            $this->weapons->attach(new $weaponClass);
         }
     }
 
@@ -270,6 +349,14 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
     protected function getDefencesSimpleArray(): array
     {
         return iterator_to_array($this->getDefences());
+    }
+
+    /**
+     * @return array
+     */
+    protected function getWeaponsSimpleArray() :array
+    {
+        return iterator_to_array($this->weapons);
     }
 
     /**
@@ -310,5 +397,31 @@ abstract class AbstractUnit extends AbstractGameObject implements UnitInterface
     protected function getPowerHealthDifference(UnitInterface $attacker): float
     {
         return $attacker->getPower() - $this->getHealth();
+    }
+
+    /**
+     * @param WeaponInterface $weapon
+     * @return bool
+     */
+    protected function shouldWeaponBeTaken(WeaponInterface $weapon): bool
+    {
+        if ($weapon instanceof DestroyableInterface) {
+            return $weapon->isDestroyed();
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array $weapons
+     * @return WeaponInterface
+     */
+    protected function findMinCostlyWeapon(array $weapons): WeaponInterface
+    {
+        foreach ($weapons as $weapon) {
+
+        }
+
+        return new EmptyWeapon;
     }
 }
